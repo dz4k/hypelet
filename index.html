@@ -1,0 +1,201 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+<title>hypelet</title>
+
+<link rel="stylesheet" href="https://unpkg.com/prism-themes@1.4.0/themes/prism-ghcolors.css">
+
+<script src="https://unpkg.com/hyperscript.org@0.0.9/"></script>
+<script src="https://unpkg.com/browse/prismjs@1.23.0/"></script>
+<script src="prism-hyperscript.js"></script>
+<script src="prism-live/index.js"></script>
+<link rel="stylesheet" href="prism-live/prism-live.css">
+
+<header>
+	<h1>hypelet</h1>
+	<p>write bookmarklets in <a href="//hyperscript.org">_hyperscript</a>
+</header>
+
+<script>
+function stringLiteral(s) {
+	return '"' + s
+		.replace(/\\/g, '\\\\')
+		.replace(/\n/gm, '\\n')
+		.replace(/"/g, "\\\"")
+		.replace(/</g, '<"+"') + '"'
+}
+
+// hyperscript event name workaround
+document.addEventListener("prism-live-init", 
+	e => e.target.dispatchEvent(new Event("prism:live:init", e)))
+</script>
+
+<script type="text/hyperscript">
+	def hyperscriptUrl return `https://unpkg.com/hyperscript.org@0.0.9/`
+	
+	def makeBookmarklet(hs)
+		return 'javascript:' + encodeURIComponent(`(function(){
+			var c = ${stringLiteral(hs)}
+			if (!window._hyperscript) {
+				var s = document.querySelector(${stringLiteral("head")})
+					.appendChild(document.createElement(${stringLiteral("script")}))
+				s.onload = () => window._hyperscript(c)
+				s.src = ${stringLiteral(hyperscriptUrl())}
+			} else window._hyperscript(c)
+		})()`)
+
+	def makePermalink(hs, name)
+		return location.origin + '/#' + encodeURIComponent({ hs: hs, name: name } as JSON)
+
+	on prism:live:init
+		get Prism.Live.ready
+		set editor to Prism.Live.all.get(target)
+		log editor
+		set Prism.Live's snippets to {
+def: ' $1($2)
+	$3
+end'
+		}
+
+		set { "'": undefined } on Prism.Live's pairs
+		
+		set the editor's shortcuts to {
+			"Ctrl + '": \e -> (editor.insertText(editor.selection.replaceAll('.', "'s ")))
+		}
+</script>
+
+<form _="
+	on load or hashchange from window
+		get the window's location's hash
+		substring(1) on it
+		if it == ''
+			halt
+		end
+		get decodeURIComponent(it) as Object
+		set #bm-name's value to its name
+		set #bm-code's value to its hs
+log 'asdadsadads'
+		call Prism.Live.all.get(#bm-code).update()
+	end
+
+	on load or input or submit
+		set #bookmarklet's textContent to #bm-name's value
+		call makeBookmarklet(#bm-code's value)
+		set #bookmarklet's @href to it
+		put decodeURIComponent(it) into #bookmarklet-code
+		set #permalink's textContent to makePermalink(#bm-code's value, #bm-name's value)
+		set the document's title to #bm-name's value
+	end">
+	<div class="form-row">
+		<label for="bm-name">name</label>
+		<input id="bm-name" value="My Bookmarklet">
+	</div>
+	<div>
+		<label for="bm-code">code</label>
+		<textarea id="bm-code" class="prism-live lang-hyperscript"
+			>init&NewLine;  click() the first &lt;a/>&NewLine;end</textarea>
+	</div>
+</form>
+
+<figure class="bookmarklet-container">
+	<a id="bookmarklet"></a>
+	<figcaption>your bookmarklet&mdash;drag it into the bookmarks 
+		toolbar</figcaption> 
+</figure>
+
+<p>
+	permalink: <button _="on click writeText(#permalink's textContent)
+		on navigator.clipboard">copy</button> <code id="permalink"></code>
+</p>
+
+<footer>
+	<p>Made by <a href="https://denizaksimsek.com">Deniz</a> with love and 
+	<a href="https://live.prism.org">Prism Live</a>
+</footer>
+
+<style>
+	* {
+		box-sizing: border-box;
+		margin: 0;
+		padding: 0;
+	}
+
+	body {
+		max-width: 82ch;
+		padding: 1ch;
+		margin: auto;
+	}
+
+	textarea {
+		display: block;
+		width: 100%;
+	}
+
+	header {
+		display: flex;
+		align-items: flex-end;
+		align-items: last baseline;
+		gap: 2ch;
+	}
+
+	h1 {
+		font-family: 'HelveticaNeue-CondensedBold', 'Roboto Condensed',
+			'Arial Narrow', sans-serif-condensed;
+		font-size: 2.8em;
+	}
+
+	:is(form, body) > * + * {
+		margin-top: 1.2em;
+	}
+
+	.form-row {
+		display: flex;
+		flex-flow: row nowrap;
+		align-items: center;
+		gap: 1ch;
+	}
+
+	.form-row label {
+		flex-grow: 0;
+	}
+
+	.form-row input {
+		flex-grow: 1;
+	}
+
+	input {
+		font: inherit;
+		border: 1px solid #dddddd;
+	}
+
+	label {
+		text-transform: uppercase;
+		font-weight: bold;
+		font-size: .8em;
+	}
+
+	.bookmarklet-container {
+		text-align: center;
+	}
+
+	#bookmarklet {
+		color: white;
+		background: #e3116c;
+		padding: 0 .5em;
+		border-radius: .5em;
+		text-decoration: none;
+		display: inline-block;
+	}
+
+	#bookmarklet:hover {
+		box-shadow: 0 .1em .2em #000a;
+	}
+
+	code {
+		word-wrap: break-word;
+	}
+
+	footer {
+		font-size: .8em;
+	}
+</style>
